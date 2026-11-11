@@ -1,5 +1,6 @@
 // Pelacakan GA4 lewat Google Tag Manager.
 // Semua event dikirim ke window.dataLayer; tag GA4 di GTM yang meneruskannya ke Google Analytics.
+// Panduan lengkap: docs/tracking.md
 
 export const GTM_ID = "GTM-TSRKC4DG";
 
