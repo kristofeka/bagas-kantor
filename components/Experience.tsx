@@ -6,6 +6,7 @@ import { POSES, POSE_IDS, type PoseId } from "../lib/poses";
 import { playLine, playSound, playVoice, setSoundEnabled, unlockSound } from "../lib/sound";
 import { KALIMAT_SAKTI, POSE_LINES, REACTIONS, greeting, type PropId, type Reaction } from "../lib/lines";
 import { PRODUCTS, SHOP_ENABLED, productFor, type Product } from "../lib/shop";
+import { track } from "../lib/analytics";
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
 
@@ -122,7 +123,10 @@ export default function Experience() {
     (id: PropId) => {
       unlockSound();
       playSound(id);
-      react(next(id, REACTIONS[id]), SHOP_ENABLED ? productFor(id) : null);
+      const reaction = next(id, REACTIONS[id]);
+      // Barang di scene 3D bukan tombol HTML, jadi dilacak manual.
+      track("prop_click", { item: id, pose: reaction.pose, line_text: reaction.line });
+      react(reaction, SHOP_ENABLED ? productFor(id) : null);
     },
     [next, react],
   );
@@ -146,7 +150,7 @@ export default function Experience() {
         <Scene pose={pose} bump={bump} onPick={onPick} />
       </div>
 
-      <header className="top">
+      <header className="top" data-track-area="header">
         <div className="brand">
           <span className="badge">AI</span>
           <div>
@@ -160,16 +164,18 @@ export default function Experience() {
             onClick={toggleSound}
             aria-pressed={sound}
             aria-label={sound ? "Suara nyala" : "Suara mati"}
+            data-track="toggle_suara"
+            data-track-value={sound ? "mati" : "nyala"}
             title={sound ? "Matikan suara" : "Nyalakan suara"}
           >
             <SoundIcon on={sound} />
             <span className="label">{sound ? "Suara: nyala" : "Suara: mati"}</span>
           </button>
-          <a href="https://www.tiktok.com/@budakkantor.ai" target="_blank" rel="noreferrer" aria-label="TikTok" title="TikTok">
+          <a href="https://www.tiktok.com/@budakkantor.ai" target="_blank" rel="noreferrer" aria-label="TikTok" title="TikTok" data-track="sosmed_tiktok">
             <TikTokIcon />
             <span className="label">TikTok</span>
           </a>
-          <a href="https://www.instagram.com/budakkantor.ai" target="_blank" rel="noreferrer" aria-label="Instagram" title="Instagram">
+          <a href="https://www.instagram.com/budakkantor.ai" target="_blank" rel="noreferrer" aria-label="Instagram" title="Instagram" data-track="sosmed_instagram">
             <InstagramIcon />
             <span className="label">Instagram</span>
           </a>
@@ -177,11 +183,18 @@ export default function Experience() {
       </header>
 
       {line && (
-        <div className="bubble" key={bump} aria-live="polite">
+        <div className="bubble" key={bump} aria-live="polite" data-track-area="balon">
           <span aria-hidden="true">{typed}</span>
           <span className="sr-only">{line}</span>
           {deal && typed.length === line.length && (
-            <a className="deal" href={deal.url} target="_blank" rel="sponsored noreferrer">
+            <a
+              className="deal"
+              href={deal.url}
+              target="_blank"
+              rel="sponsored noreferrer"
+              data-track="afiliasi_balon"
+              data-track-value={deal.prop}
+            >
               <span className="swatch" style={{ background: deal.color }} aria-hidden="true" />
               <span>
                 <b>{deal.name}</b>
@@ -197,13 +210,19 @@ export default function Experience() {
 
       {SHOP_ENABLED && shopOpen && (
         <div className="shop-backdrop" onClick={() => setShopOpen(false)}>
-          <section className="shop" role="dialog" aria-label="Barang Bagas" onClick={(event) => event.stopPropagation()}>
+          <section
+            className="shop"
+            role="dialog"
+            aria-label="Barang Bagas"
+            data-track-area="barang_bagas"
+            onClick={(event) => event.stopPropagation()}
+          >
             <header>
               <div>
                 <h2>Barang di meja Bagas</h2>
                 <p>Gue nggak digaji buat promosi. Tapi kalau lo beli lewat sini, gue dapat komisi kecil.</p>
               </div>
-              <button className="close" onClick={() => setShopOpen(false)} aria-label="Tutup">
+              <button className="close" onClick={() => setShopOpen(false)} aria-label="Tutup" data-track="tutup_barang_bagas">
                 ×
               </button>
             </header>
@@ -216,7 +235,13 @@ export default function Experience() {
                     <p>{product.note}</p>
                     <small>{product.price}</small>
                   </div>
-                  <a href={product.url} target="_blank" rel="sponsored noreferrer">
+                  <a
+                    href={product.url}
+                    target="_blank"
+                    rel="sponsored noreferrer"
+                    data-track="afiliasi_daftar"
+                    data-track-value={product.prop}
+                  >
                     Lihat di {product.store}
                   </a>
                 </li>
@@ -227,14 +252,15 @@ export default function Experience() {
         </div>
       )}
 
-      <footer className="bottom">
+      <footer className="bottom" data-track-area="footer">
         <div className="actions">
-          <button className="sakti" onClick={onSakti}>
+          <button className="sakti" onClick={onSakti} data-track="kalimat_sakti">
             Minta kalimat sakti
           </button>
           {SHOP_ENABLED && (
             <button
               className="shop-open"
+              data-track="buka_barang_bagas"
               onClick={() => {
                 unlockSound();
                 playSound("pop");
@@ -254,6 +280,8 @@ export default function Experience() {
               key={id}
               className={id === pose ? "chip active" : "chip"}
               aria-pressed={id === pose}
+              data-track="mood"
+              data-track-value={id}
               onClick={() => {
                 unlockSound();
                 playSound("pop");
