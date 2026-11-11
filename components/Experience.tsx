@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { POSES, POSE_IDS, type PoseId } from "../lib/poses";
 import { playLine, playSound, playVoice, setSoundEnabled, unlockSound } from "../lib/sound";
 import { KALIMAT_SAKTI, POSE_LINES, REACTIONS, greeting, type PropId, type Reaction } from "../lib/lines";
+import { PRODUCTS, SHOP_ENABLED, productFor, type Product } from "../lib/shop";
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
 
@@ -67,10 +68,13 @@ export default function Experience() {
   const [bump, setBump] = useState(0);
   const [refused, setRefused] = useState(0);
   const [sound, setSound] = useState(true);
+  const [deal, setDeal] = useState<Product | null>(null);
+  const [shopOpen, setShopOpen] = useState(false);
   const cursor = useRef<Record<string, number>>({});
   const typed = useTyped(line, bump);
 
-  const react = useCallback((reaction: Reaction) => {
+  const react = useCallback((reaction: Reaction, product: Product | null = null) => {
+    setDeal(product);
     setPose(reaction.pose);
     setLine(reaction.line);
     setBump((value) => value + 1);
@@ -118,7 +122,7 @@ export default function Experience() {
     (id: PropId) => {
       unlockSound();
       playSound(id);
-      react(next(id, REACTIONS[id]));
+      react(next(id, REACTIONS[id]), SHOP_ENABLED ? productFor(id) : null);
     },
     [next, react],
   );
@@ -176,6 +180,50 @@ export default function Experience() {
         <div className="bubble" key={bump} aria-live="polite">
           <span aria-hidden="true">{typed}</span>
           <span className="sr-only">{line}</span>
+          {deal && typed.length === line.length && (
+            <a className="deal" href={deal.url} target="_blank" rel="sponsored noreferrer">
+              <span className="swatch" style={{ background: deal.color }} aria-hidden="true" />
+              <span>
+                <b>{deal.name}</b>
+                <small>
+                  {deal.store} · link afiliasi
+                </small>
+              </span>
+              <span aria-hidden="true">→</span>
+            </a>
+          )}
+        </div>
+      )}
+
+      {SHOP_ENABLED && shopOpen && (
+        <div className="shop-backdrop" onClick={() => setShopOpen(false)}>
+          <section className="shop" role="dialog" aria-label="Barang Bagas" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <h2>Barang di meja Bagas</h2>
+                <p>Gue nggak digaji buat promosi. Tapi kalau lo beli lewat sini, gue dapat komisi kecil.</p>
+              </div>
+              <button className="close" onClick={() => setShopOpen(false)} aria-label="Tutup">
+                ×
+              </button>
+            </header>
+            <ul>
+              {PRODUCTS.map((product) => (
+                <li key={product.prop}>
+                  <span className="swatch big" style={{ background: product.color }} aria-hidden="true" />
+                  <div>
+                    <b>{product.name}</b>
+                    <p>{product.note}</p>
+                    <small>{product.price}</small>
+                  </div>
+                  <a href={product.url} target="_blank" rel="sponsored noreferrer">
+                    Lihat di {product.store}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p className="disclosure">Link afiliasi. Harga bisa berubah, cek di toko.</p>
+          </section>
         </div>
       )}
 
@@ -184,6 +232,18 @@ export default function Experience() {
           <button className="sakti" onClick={onSakti}>
             Minta kalimat sakti
           </button>
+          {SHOP_ENABLED && (
+            <button
+              className="shop-open"
+              onClick={() => {
+                unlockSound();
+                playSound("pop");
+                setShopOpen(true);
+              }}
+            >
+              Barang Bagas
+            </button>
+          )}
           <span className="counter">
             Kerjaan ditolak dengan sopan: <b>{refused}</b>
           </span>
