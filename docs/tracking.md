@@ -2,6 +2,9 @@
 
 Dokumen ini menjelaskan cara kerja pelacakan klik di website, cara melacak tombol atau interaksi baru, dan cara mengatur GTM supaya datanya sampai ke GA4.
 
+- Developer yang menambah tombol atau event: baca **Cara kerja** dan **Cara melacak hal baru**.
+- Yang mengatur GTM dan GA4 untuk pertama kali: langsung ke **Tutorial Google Tag Manager dari awal**.
+
 ## Ringkasnya
 
 - Setiap klik pada `<button>` atau `<a>` **otomatis** terlacak sebagai event `ui_click`. Tombol baru tidak perlu kode tambahan.
@@ -163,32 +166,210 @@ Nama `data-track` yang sudah dipakai:
 
 Nilai `item` pada `prop_click`: `bagas`, `laptop`, `mug`, `hp`, `jam`, `kalender`, `tanaman`.
 
-## Pengaturan di GTM (sekali saja)
+## Tutorial Google Tag Manager dari awal
 
-Kode website hanya mengirim event ke `dataLayer`. Supaya sampai ke GA4, buat ini di container `GTM-TSRKC4DG`:
+Kode website hanya mengirim event ke `dataLayer`. GTM yang memutuskan event mana dikirim ke GA4 dan dengan parameter apa. Bagian ini menuntun pengaturan dari nol sampai data muncul di laporan GA4.
 
-1. **Google Tag** berisi Measurement ID GA4 (`G-…`), trigger *Initialization – All Pages*.
-2. **Variables → User-Defined → Data Layer Variable**, satu untuk tiap parameter: `click_name`, `click_text`, `click_value`, `click_area`, `click_element`, `link_url`, `outbound`, `item`, `pose`, `line_text`.
-3. **Triggers → Custom Event**, satu untuk `ui_click` dan satu untuk `prop_click`. Atau satu trigger dengan regex `^(ui_click|prop_click)$`.
-4. **Tags → Google Analytics: GA4 Event**: Event Name `{{Event}}`, Event Parameters diisi variabel dari langkah 2, trigger dari langkah 3.
-5. **Submit / Publish** container.
-6. Di GA4: **Admin → Custom definitions → Create custom dimension** (scope *Event*) untuk parameter yang ingin muncul di laporan, minimal `click_name`, `click_value`, `click_area`, dan `item`.
+Nama menu di bawah mengikuti tampilan GTM dan GA4 berbahasa Inggris (November 2026). Kalau Google mengubah letak menunya, cari dengan nama yang sama.
 
-Event manual baru cukup ditambahkan ke trigger di langkah 3, dan parameter barunya dibuatkan variabel di langkah 2.
+### Konsep dasar GTM
 
-## Cara mengecek
+| Istilah | Artinya | Di proyek ini |
+|---|---|---|
+| **Account** | Wadah paling atas, biasanya satu per bisnis | Budak Kantor AI |
+| **Container** | Satu set pengaturan untuk satu situs. Punya ID `GTM-…` | `GTM-TSRKC4DG` |
+| **Tag** | Kode yang dijalankan GTM, misalnya "kirim event ke GA4" | Google Tag, GA4 Event |
+| **Trigger** | Kapan tag dijalankan | Saat halaman dibuka, saat ada event `ui_click` |
+| **Variable** | Nilai yang dibaca GTM, misalnya isi `click_name` dari `dataLayer` | `DLV - click_name`, dst. |
+| **Workspace / Version** | Draf perubahan. Belum aktif sebelum di-**Publish** | – |
 
-**Di localhost** (GTM tidak dimuat, tapi `dataLayer` terisi). Jalankan `npm run dev`, klik beberapa tombol, lalu di console browser:
+Alurnya: website mendorong `{event: "ui_click", click_name: "kalimat_sakti", …}` ke `dataLayer`, **trigger** Custom Event `ui_click` menyala, **tag** GA4 Event berjalan dan mengirim event beserta parameter yang dibaca lewat **variable**.
+
+### Langkah 0 – Yang perlu disiapkan
+
+1. Akun Google yang sama untuk GTM dan GA4.
+2. Akses ke container `GTM-TSRKC4DG` di [tagmanager.google.com](https://tagmanager.google.com). Container ini sudah ada dan kodenya sudah terpasang di website, jadi tidak perlu memasang snippet lagi.
+3. Akses Editor atau Administrator ke properti GA4 di [analytics.google.com](https://analytics.google.com).
+
+> Kalau suatu saat perlu membuat container baru: di GTM klik **Create Account**, isi nama akun dan negara, isi **Container name** dengan domain situs, pilih **Web**, lalu **Create**. Salin ID `GTM-…` yang muncul ke `GTM_ID` di `lib/analytics.ts`. Snippet yang ditampilkan GTM tidak perlu ditempel manual; `components/Analytics.tsx` sudah memuatnya.
+
+### Langkah 1 – Buat properti GA4 dan ambil Measurement ID
+
+Lewati bagian ini kalau properti GA4 untuk situs ini sudah ada.
+
+1. Buka GA4 → **Admin** (ikon roda gigi kiri bawah) → **Create** → **Property**.
+2. Isi **Property name** (mis. "Meja Bagas"), **Reporting time zone** Indonesia, **Currency** Rupiah. Klik **Next**, isi info bisnis, lalu **Create**.
+3. Pilih platform **Web**. Isi **Website URL** dengan domain Vercel situs ini dan **Stream name** "Website Bagas". Biarkan **Enhanced measurement** menyala. Klik **Create stream**.
+4. Salin **Measurement ID** yang berbentuk `G-XXXXXXXXXX`. ID ini dipakai di langkah berikutnya.
+
+Kalau properti sudah ada: **Admin → Data collection and modification → Data streams** → pilih stream web → salin **Measurement ID**.
+
+> Abaikan petunjuk GA4 untuk memasang kode gtag.js di website. Pemasangan dilakukan lewat GTM.
+
+### Langkah 2 – Variable: simpan Measurement ID
+
+Supaya Measurement ID cukup ditulis sekali:
+
+1. GTM → container `GTM-TSRKC4DG` → **Variables** → bagian **User-Defined Variables** → **New**.
+2. Beri nama `CONST - GA4 Measurement ID`.
+3. **Variable Configuration** → **Constant** → isi **Value** dengan `G-XXXXXXXXXX`.
+4. **Save**.
+
+### Langkah 3 – Tag: Google Tag (pemasangan GA4 dasar)
+
+Tag ini menyambungkan situs ke GA4 dan otomatis mengirim `page_view`.
+
+1. **Tags** → **New** → nama `GA4 - Google Tag`.
+2. **Tag Configuration** → **Google Tag**.
+3. **Tag ID**: klik ikon blok `+` dan pilih `{{CONST - GA4 Measurement ID}}`.
+4. **Triggering** → pilih **Initialization - All Pages**.
+5. **Save**.
+
+### Langkah 4 – Variable: baca parameter dari dataLayer
+
+Buat satu **Data Layer Variable** untuk tiap parameter yang dikirim website.
+
+1. **Variables** → **User-Defined Variables** → **New**.
+2. **Variable Configuration** → **Data Layer Variable**.
+3. **Data Layer Variable Name**: nama parameter persis seperti di kode, mis. `click_name`. **Data Layer Version**: Version 2.
+4. Beri nama variabel `DLV - click_name`, lalu **Save**.
+5. Ulangi untuk semua parameter berikut:
+
+| Nama variabel GTM | Data Layer Variable Name |
+|---|---|
+| `DLV - click_name` | `click_name` |
+| `DLV - click_text` | `click_text` |
+| `DLV - click_value` | `click_value` |
+| `DLV - click_area` | `click_area` |
+| `DLV - click_element` | `click_element` |
+| `DLV - link_url` | `link_url` |
+| `DLV - outbound` | `outbound` |
+| `DLV - item` | `item` |
+| `DLV - pose` | `pose` |
+| `DLV - line_text` | `line_text` |
+
+Tips: aktifkan juga variabel bawaan GTM di **Variables → Built-In Variables → Configure**, centang **Event**. Variabel `{{Event}}` berisi nama event (`ui_click` / `prop_click`) dan dipakai di langkah 6.
+
+### Langkah 5 – Trigger: tangkap event dari website
+
+1. **Triggers** → **New** → nama `CE - Bagas events`.
+2. **Trigger Configuration** → **Custom Event**.
+3. **Event name**: `^(ui_click|prop_click)$`, lalu centang **Use regex matching**.
+4. **This trigger fires on**: **All Custom Events**.
+5. **Save**.
+
+Nanti kalau ada event manual baru, misalnya `video_play`, cukup tambahkan ke regex: `^(ui_click|prop_click|video_play)$`.
+
+### Langkah 6 – Tag: GA4 Event
+
+1. **Tags** → **New** → nama `GA4 - Event - Bagas events`.
+2. **Tag Configuration** → **Google Analytics** → **Google Analytics: GA4 Event**.
+3. **Measurement ID**: `{{CONST - GA4 Measurement ID}}`.
+4. **Event Name**: `{{Event}}`. Dengan begitu nama event di GA4 sama dengan nama di kode (`ui_click`, `prop_click`), dan satu tag cukup untuk semua event.
+5. Buka **Event Parameters** → **Add parameter**, lalu isi:
+
+| Event Parameter | Value |
+|---|---|
+| `click_name` | `{{DLV - click_name}}` |
+| `click_text` | `{{DLV - click_text}}` |
+| `click_value` | `{{DLV - click_value}}` |
+| `click_area` | `{{DLV - click_area}}` |
+| `click_element` | `{{DLV - click_element}}` |
+| `link_url` | `{{DLV - link_url}}` |
+| `outbound` | `{{DLV - outbound}}` |
+| `item` | `{{DLV - item}}` |
+| `pose` | `{{DLV - pose}}` |
+| `line_text` | `{{DLV - line_text}}` |
+
+   Parameter yang kosong untuk event tertentu (mis. `item` pada `ui_click`) tidak masalah.
+6. **Triggering** → pilih `CE - Bagas events`.
+7. **Save**.
+
+### Langkah 7 – Uji dengan Preview
+
+Jangan Publish sebelum diuji.
+
+1. Di GTM, klik **Preview** (kanan atas).
+2. Masukkan URL situs di Vercel, lalu **Connect**. Situs terbuka di tab baru dengan panel kecil "Tag Assistant Connected".
+3. Di situs: klik **Minta kalimat sakti**, sebuah chip mood, tombol suara, dan mug di meja.
+4. Kembali ke tab **Tag Assistant**. Di kolom kiri muncul daftar event. Klik `ui_click`:
+   - Tab **Tags**: `GA4 - Event - Bagas events` ada di **Tags Fired**.
+   - Tab **Variables**: `DLV - click_name` berisi `kalimat_sakti`, dan seterusnya.
+5. Klik `prop_click` dan pastikan `DLV - item` berisi `mug`.
+6. Di GA4 → **Admin → Data display → DebugView**, event yang sama muncul dalam beberapa detik beserta parameternya.
+
+Kalau tag ada di **Tags Not Fired**, lihat bagian *Kalau ada masalah* di bawah.
+
+### Langkah 8 – Publish
+
+1. Kembali ke GTM, klik **Submit** (kanan atas).
+2. **Version name**: mis. `GA4 + tracking klik Bagas`. **Version description**: ringkasan perubahan.
+3. Klik **Publish**.
+
+Sejak saat ini semua pengunjung situs mulai tercatat. Setiap perubahan GTM berikutnya juga harus di-Preview lalu di-Publish lagi.
+
+### Langkah 9 – Custom dimension di GA4
+
+Parameter event baru bisa dipakai di laporan GA4 setelah didaftarkan sebagai custom dimension.
+
+1. GA4 → **Admin → Data display → Custom definitions** → **Create custom dimension**.
+2. Isi seperti tabel di bawah, **Scope**: **Event**, lalu **Save**. Ulangi untuk tiap baris.
+
+| Dimension name | Event parameter |
+|---|---|
+| Nama klik | `click_name` |
+| Nilai klik | `click_value` |
+| Area klik | `click_area` |
+| URL link | `link_url` |
+| Barang | `item` |
+| Pose Bagas | `pose` |
+
+`click_text`, `click_element`, `outbound`, dan `line_text` boleh ikut didaftarkan kalau perlu. Properti GA4 gratis punya batas 50 custom dimension per properti.
+
+Custom dimension hanya berlaku untuk data **sejak dibuat**, tidak mundur ke data lama. Daftarkan secepatnya setelah Publish.
+
+### Langkah 10 – Melihat hasil di GA4
+
+- **Reports → Engagement → Events**: jumlah `ui_click` dan `prop_click`. Data biasanya muncul 24–48 jam setelah Publish.
+- **Tombol mana yang paling sering diklik**: **Explore** → **Free form** → Dimensions: *Event name*, *Nama klik*, *Nilai klik* → Metrics: *Event count* → filter *Event name* = `ui_click`.
+- **Barang favorit di meja**: Free form dengan dimensi *Barang*, filter *Event name* = `prop_click`.
+- **Klik ke TikTok dan Instagram**: filter *Nama klik* berisi `sosmed_`.
+
+### Kalau ada masalah
+
+| Gejala | Penyebab dan solusi |
+|---|---|
+| Tag Assistant tidak tersambung | Matikan ad blocker di tab itu. Pastikan yang dibuka situs Vercel, bukan localhost (GTM tidak dimuat di `npm run dev`). |
+| Event `ui_click` tidak muncul di Tag Assistant | Cek di console: `dataLayer.filter(e => e.event)`. Kalau kosong, tombolnya bukan `<button>`/`<a>` dan tidak punya `data-track`, atau ada `data-track-ignore`. |
+| Event muncul, tapi tag ada di **Tags Not Fired** | Regex di trigger salah ketik atau **Use regex matching** belum dicentang. |
+| Variabel `DLV - …` bernilai `undefined` | **Data Layer Variable Name** tidak persis sama dengan nama parameter di kode (huruf besar/kecil berpengaruh). |
+| DebugView kosong | Tunggu 1–2 menit. Pastikan Measurement ID di `CONST - GA4 Measurement ID` benar dan perangkat yang dipakai memang sedang dalam mode Preview. |
+| Laporan Events kosong | Normal sampai 48 jam setelah Publish. Pastikan container sudah di-**Publish**, bukan hanya di-Preview. |
+| Laporan menampilkan "(not set)" untuk custom dimension | Data itu tercatat sebelum dimensi dibuat, atau event tersebut memang tidak membawa parameter itu (mis. `item` pada `ui_click`). |
+
+### Ringkasan isi container
+
+Setelah semua langkah selesai, container `GTM-TSRKC4DG` berisi:
+
+- **Tags**: `GA4 - Google Tag`, `GA4 - Event - Bagas events`
+- **Triggers**: `CE - Bagas events` (+ bawaan *Initialization - All Pages*)
+- **Variables**: `CONST - GA4 Measurement ID`, 10 × `DLV - …`, bawaan `Event`
+
+### Menambah event atau parameter baru
+
+1. Di kode: tombol baru tidak perlu apa-apa. Untuk event manual baru, panggil `track("nama_event", {...})`.
+2. Di GTM: tambahkan nama event ke regex trigger `CE - Bagas events` (langkah 5). Kalau ada parameter baru, buat `DLV - …` (langkah 4) dan tambahkan ke tag GA4 Event (langkah 6).
+3. **Preview** → uji → **Submit/Publish**.
+4. Di GA4: daftarkan parameter baru sebagai custom dimension (langkah 9).
+5. Perbarui tabel *Daftar event saat ini* di dokumen ini.
+
+## Cara mengecek di localhost
+
+GTM tidak dimuat saat `npm run dev`, tapi `dataLayer` tetap terisi. Klik beberapa tombol, lalu di console browser:
 
 ```js
 dataLayer.filter((e) => e.event)
 ```
-
-**Di situs Vercel:**
-
-- GTM → **Preview**, masukkan URL situs, lalu klik tombol. Event `ui_click` / `prop_click` dan tag GA4 yang terpicu akan muncul.
-- GA4 → **Admin → DebugView** selama mode Preview aktif.
-- Laporan GA4 biasa (Reports → Engagement → Events) baru terisi setelah 24–48 jam. Custom dimension hanya berlaku untuk data sejak dimensi itu dibuat.
 
 ## Catatan
 
