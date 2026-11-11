@@ -32,6 +32,35 @@ const useTyped = (text: string, bump: number) => {
   return text.slice(0, count);
 };
 
+const SoundIcon = ({ on }: { on: boolean }) => (
+  <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" stroke="none" />
+    {on ? (
+      <path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" />
+    ) : (
+      <path d="M16.5 9.5l5 5M21.5 9.5l-5 5" />
+    )}
+  </svg>
+);
+
+const TikTokIcon = () => (
+  <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M16.6 3c.4 2.1 1.8 3.6 3.9 3.8v3a7.3 7.3 0 0 1-3.9-1.2v6.3a5.6 5.6 0 1 1-5.6-5.6c.3 0 .6 0 .9.1v3.1a2.6 2.6 0 1 0 1.7 2.4V3z"
+    />
+  </svg>
+);
+
+const InstagramIcon = () => (
+  <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 export default function Experience() {
   const [pose, setPose] = useState<PoseId>("lipat-tangan");
   const [line, setLine] = useState("");
@@ -122,14 +151,23 @@ export default function Experience() {
           </div>
         </div>
         <nav>
-          <button className="sound" onClick={toggleSound} aria-pressed={sound}>
-            {sound ? "Suara: nyala" : "Suara: mati"}
+          <button
+            className="sound"
+            onClick={toggleSound}
+            aria-pressed={sound}
+            aria-label={sound ? "Suara nyala" : "Suara mati"}
+            title={sound ? "Matikan suara" : "Nyalakan suara"}
+          >
+            <SoundIcon on={sound} />
+            <span className="label">{sound ? "Suara: nyala" : "Suara: mati"}</span>
           </button>
-          <a href="https://www.tiktok.com/@budakkantor.ai" target="_blank" rel="noreferrer">
-            TikTok
+          <a href="https://www.tiktok.com/@budakkantor.ai" target="_blank" rel="noreferrer" aria-label="TikTok" title="TikTok">
+            <TikTokIcon />
+            <span className="label">TikTok</span>
           </a>
-          <a href="https://www.instagram.com/budakkantor.ai" target="_blank" rel="noreferrer">
-            Instagram
+          <a href="https://www.instagram.com/budakkantor.ai" target="_blank" rel="noreferrer" aria-label="Instagram" title="Instagram">
+            <InstagramIcon />
+            <span className="label">Instagram</span>
           </a>
         </nav>
       </header>
