@@ -270,7 +270,191 @@ nav a:active,
   clip-path: inset(50%);
 }
 
+/* Link afiliasi di balon setelah Bagas bereaksi ke barang. */
+.deal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 12px 8px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--cream);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+  pointer-events: auto;
+  animation: pop 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.deal:hover {
+  background: #fff4d6;
+}
+
+.deal > span:nth-child(2) {
+  flex: 1;
+  display: grid;
+  line-height: 1.2;
+}
+
+.deal small {
+  font-weight: 600;
+  opacity: 0.65;
+  font-size: 12px;
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+}
+
+.swatch.big {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+}
+
+.shop-open {
+  padding: 12px 18px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.shop-open:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.shop-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(43, 26, 18, 0.35);
+}
+
+.shop {
+  width: min(520px, 100%);
+  max-height: min(640px, 100%);
+  display: flex;
+  flex-direction: column;
+  border: 3px solid var(--ink);
+  border-radius: 22px;
+  background: var(--paper);
+  box-shadow: 6px 6px 0 var(--ink);
+  animation: pop 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);
+  overflow: hidden;
+}
+
+.shop header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 18px 18px 12px;
+  border-bottom: 2px dashed rgba(43, 26, 18, 0.25);
+}
+
+.shop h2 {
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.shop header p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+.close {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--cream);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.shop ul {
+  margin: 0;
+  padding: 8px 18px;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.shop li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(43, 26, 18, 0.12);
+}
+
+.shop li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop li p {
+  margin: 2px 0;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.shop li small {
+  font-weight: 700;
+}
+
+.shop li a {
+  flex: none;
+  padding: 8px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--paper);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.disclosure {
+  margin: 0;
+  padding: 10px 18px 14px;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
 @media (max-width: 760px) {
+  .shop-open {
+    padding: 10px 16px;
+    font-size: 15px;
+  }
+
+  .shop li {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    column-gap: 12px;
+    row-gap: 8px;
+  }
+
+  .shop li a {
+    grid-column: 2;
+    justify-self: start;
+  }
+
   .top {
     padding: 12px 14px;
   }
