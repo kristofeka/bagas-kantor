@@ -35,7 +35,7 @@ Isi sheet jadi bisa dilihat siapa pun yang punya link-nya. Jangan isi data rahas
 3. Centang **Production** dan **Preview**, lalu **Save**.
 4. Buka **Deployments**, klik **⋯** pada deployment teratas → **Redeploy**. Ini hanya perlu sekali, supaya website membaca variabel baru.
 
-Sheet yang dipakai adalah tab yang terbuka saat link di-copy. Kalau sheet punya beberapa tab, buka tab produk dulu baru copy link-nya.
+Link dari tombol Share membaca **tab pertama** di sheet. Kalau produk ada di tab lain, buka tab itu lalu copy link dari address bar browser (yang berakhiran `#gid=…`).
 
 ## Isi kolom
 

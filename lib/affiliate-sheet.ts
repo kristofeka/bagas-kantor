@@ -14,8 +14,11 @@ export const toCsvUrl = (raw: string) => {
   if (url.includes("/spreadsheets/d/e/") || url.includes("output=csv") || url.includes("format=csv")) return url;
   const id = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1];
   if (!id) return url;
-  const gid = url.match(/[#&?]gid=(\d+)/)?.[1] ?? "0";
-  return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+  // Link dari tombol Share tidak memuat gid. Tanpa gid, Google memberi tab pertama.
+  // Jangan menebak gid=0: tab hasil impor atau tab baru punya nomor lain.
+  const gid = url.match(/[#&?]gid=(\d+)/)?.[1];
+  const base = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv`;
+  return gid ? `${base}&gid=${gid}` : base;
 };
 
 // Pembaca CSV kecil yang mengerti tanda kutip, koma, dan baris baru di dalam sel.
