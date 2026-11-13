@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { POSES, POSE_IDS, type PoseId } from "../lib/poses";
 import { playLine, playSound, playVoice, setSoundEnabled, unlockSound } from "../lib/sound";
 import { KALIMAT_SAKTI, POSE_LINES, REACTIONS, greeting, type PropId, type Reaction } from "../lib/lines";
-import { PRODUCTS, SHOP_ENABLED, productFor, type Product } from "../lib/shop";
+import type { Product } from "../lib/shop";
 import { track } from "../lib/analytics";
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
@@ -63,7 +63,16 @@ const InstagramIcon = () => (
   </svg>
 );
 
-export default function Experience() {
+// Kotak gambar produk: foto dari sheet bila ada, kalau tidak kotak warna.
+const Thumb = ({ product, big }: { product: Product; big?: boolean }) =>
+  product.image ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className={big ? "swatch big" : "swatch"} src={product.image} alt="" loading="lazy" />
+  ) : (
+    <span className={big ? "swatch big" : "swatch"} style={{ background: product.color }} aria-hidden="true" />
+  );
+
+export default function Experience({ products = [] }: { products?: Product[] }) {
   const [pose, setPose] = useState<PoseId>("lipat-tangan");
   const [line, setLine] = useState("");
   const [bump, setBump] = useState(0);
@@ -126,9 +135,9 @@ export default function Experience() {
       const reaction = next(id, REACTIONS[id]);
       // Barang di scene 3D bukan tombol HTML, jadi dilacak manual.
       track("prop_click", { item: id, pose: reaction.pose, line_text: reaction.line });
-      react(reaction, SHOP_ENABLED ? productFor(id) : null);
+      react(reaction, products.find((product) => product.prop === id) ?? null);
     },
-    [next, react],
+    [next, react, products],
   );
 
   const onSakti = () => {
@@ -195,7 +204,7 @@ export default function Experience() {
               data-track="afiliasi_balon"
               data-track-value={deal.prop}
             >
-              <span className="swatch" style={{ background: deal.color }} aria-hidden="true" />
+              <Thumb product={deal} />
               <span>
                 <b>{deal.name}</b>
                 <small>
@@ -208,7 +217,7 @@ export default function Experience() {
         </div>
       )}
 
-      {SHOP_ENABLED && shopOpen && (
+      {products.length > 0 && shopOpen && (
         <div className="shop-backdrop" onClick={() => setShopOpen(false)}>
           <section
             className="shop"
@@ -227,13 +236,13 @@ export default function Experience() {
               </button>
             </header>
             <ul>
-              {PRODUCTS.map((product) => (
-                <li key={product.prop}>
-                  <span className="swatch big" style={{ background: product.color }} aria-hidden="true" />
+              {products.map((product, index) => (
+                <li key={`${product.prop}-${index}`}>
+                  <Thumb product={product} big />
                   <div>
                     <b>{product.name}</b>
                     <p>{product.note}</p>
-                    <small>{product.price}</small>
+                    {product.price && <small>{product.price}</small>}
                   </div>
                   <a
                     href={product.url}
@@ -257,7 +266,7 @@ export default function Experience() {
           <button className="sakti" onClick={onSakti} data-track="kalimat_sakti">
             Minta kalimat sakti
           </button>
-          {SHOP_ENABLED && (
+          {products.length > 0 && (
             <button
               className="shop-open"
               data-track="buka_barang_bagas"

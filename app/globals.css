@@ -519,3 +519,8 @@ nav a:active,
     animation: none;
   }
 }
+
+img.swatch {
+  object-fit: cover;
+  background: var(--paper);
+}
