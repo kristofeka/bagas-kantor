@@ -45,7 +45,7 @@ Sheet yang dipakai adalah tab yang terbuka saat link di-copy. Kalau sheet punya 
 | `aktif` | Ya | `TRUE` untuk tampil, `FALSE` untuk sembunyi. Juga diterima: `ya`, `1`, `aktif`. Lebih praktis jadikan checkbox: pilih kolom ini → **Insert → Checkbox**. |
 | `nama` | Ya | Nama produk, mis. "Mug enamel kantor". |
 | `catatan` | Tidak | Komentar Bagas yang tampil di daftar. |
-| `harga` | Tidak | Teks bebas, mis. "Rp45.000" atau "mulai Rp30rb". Kosongkan kalau tidak mau menampilkan harga. |
+| `harga` | Tidak | Angka saja, mis. `33250`, `33.250`, atau `Rp 33250`, otomatis tampil "Rp33.250". Teks bebas seperti "mulai Rp30rb" ditampilkan apa adanya. Kosongkan kalau tidak mau menampilkan harga. |
 | `toko` | Tidak | Nama toko di tombol, mis. "Shopee". Muncul sebagai "Lihat di Shopee". |
 | `link` | Ya | Link afiliasi lengkap, diawali `https://`. |
 | `gambar` | Tidak | Link foto produk (`https://…`). Kalau kosong, tampil kotak warna. |

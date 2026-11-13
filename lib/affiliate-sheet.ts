@@ -51,6 +51,19 @@ export const parseCsv = (text: string) => {
   return rows;
 };
 
+// Harga berupa angka (33250, 33.250, 33,250, Rp 33250, 33250.00) diubah jadi "Rp33.250".
+// Teks bebas seperti "mulai Rp30rb" dibiarkan apa adanya.
+export const formatPrice = (raw: string) => {
+  const value = raw.trim();
+  const number = value.replace(/^rp\.?\s*/i, "").replace(/\s/g, "");
+  let digits: string | null = null;
+  if (/^\d+$/.test(number)) digits = number;
+  else if (/^\d{1,3}([.,]\d{3})+$/.test(number)) digits = number.replace(/[.,]/g, "");
+  else if (/^\d+[.,]\d{1,2}$/.test(number)) digits = number.split(/[.,]/)[0];
+  if (!digits) return value;
+  return "Rp" + Number(digits).toLocaleString("id-ID", { maximumFractionDigits: 0 });
+};
+
 const YES = new Set(["true", "ya", "yes", "1", "aktif", "on", "✓", "v"]);
 
 const isLink = (value: string) => {
@@ -92,7 +105,7 @@ export const parseProducts = (csv: string): Product[] => {
       prop,
       name: at(row, "nama"),
       note: at(row, "catatan"),
-      price: at(row, "harga"),
+      price: formatPrice(at(row, "harga")),
       store: at(row, "toko") || "toko",
       url: at(row, "link"),
       image: at(row, "gambar"),
