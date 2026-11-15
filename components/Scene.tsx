@@ -6,6 +6,15 @@ import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "
 import * as THREE from "three";
 import { K, POSE_IDS, poseLayout, type PoseId } from "../lib/poses";
 import { wibNow, type PropId } from "../lib/lines";
+import {
+  LATAR,
+  LATAR_IDS,
+  POSE_LATAR,
+  SUASANA,
+  currentSuasana,
+  type LatarId,
+  type SuasanaLook,
+} from "../lib/latar";
 
 const INK = "#2B1A12";
 const EYE_Y = 1.45;
@@ -108,7 +117,17 @@ const makeLidTexture = (skin: string) => {
   return texture;
 };
 
-const Bagas = ({ pose, bump, onPick }: { pose: PoseId; bump: number; onPick: PickHandler }) => {
+const Bagas = ({
+  pose,
+  bump,
+  onPick,
+  tint,
+}: {
+  pose: PoseId;
+  bump: number;
+  onPick: PickHandler;
+  tint: string;
+}) => {
   const textures = useTexture(POSE_IDS.map((id) => `/bagas/${id}.webp`));
   const map = useMemo(() => {
     const result = {} as Record<PoseId, THREE.Texture>;
@@ -168,13 +187,13 @@ const Bagas = ({ pose, bump, onPick }: { pose: PoseId; bump: number; onPick: Pic
             }}
           >
             <planeGeometry args={[layout.w, layout.h]} />
-            <meshBasicMaterial map={map[pose]} transparent alphaTest={0.4} toneMapped={false} />
+            <meshBasicMaterial map={map[pose]} color={tint} transparent alphaTest={0.4} toneMapped={false} />
           </mesh>
           <group ref={lids} visible={false}>
             {[layout.eyeL, layout.eyeR].map((eye, index) => (
               <mesh key={index} position={[eye[0], eye[1], 0.004]} scale={[index ? -1 : 1, 1, 1]}>
                 <planeGeometry args={[90 * K, 75 * K]} />
-                <meshBasicMaterial map={lid} transparent toneMapped={false} side={THREE.DoubleSide} />
+                <meshBasicMaterial map={lid} color={tint} transparent toneMapped={false} side={THREE.DoubleSide} />
               </mesh>
             ))}
           </group>
@@ -184,23 +203,56 @@ const Bagas = ({ pose, bump, onPick }: { pose: PoseId; bump: number; onPick: Pic
   );
 };
 
-const skyFor = (hours: number) => {
-  if (hours >= 6 && hours < 16) return { sky: "#BFE3F5", orb: "#FFF3B8", orbY: 0.22 };
-  if (hours >= 16 && hours < 18) return { sky: "#F3A25C", orb: "#FFE0A3", orbY: -0.12 };
-  return { sky: "#2A3554", orb: "#F4EFD8", orbY: 0.18 };
+const tinted = (base: string, tint: string) => new THREE.Color(base).multiply(new THREE.Color(tint));
+
+// Posisi bintang di kaca jendela (satuan kaca 1,34 x 0,94).
+const STARS: [number, number][] = [
+  [-0.5, 0.3],
+  [-0.22, 0.12],
+  [0.12, 0.34],
+  [0.48, -0.05],
+  [-0.4, -0.25],
+  [0.2, -0.3],
+];
+
+const makeGlowTexture = () => {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 128;
+  const ctx = canvas.getContext("2d")!;
+  const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gradient.addColorStop(0, "rgba(255,243,200,1)");
+  gradient.addColorStop(1, "rgba(255,243,200,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 128, 128);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
 };
 
-const Room = () => {
-  const { sky, orb, orbY } = useMemo(() => skyFor(wibNow().hours), []);
+const Room = ({ look, latar }: { look: SuasanaLook; latar: LatarId | null }) => {
+  const floorMat = useRef<THREE.MeshBasicMaterial>(null);
+  const floorTarget = useMemo(
+    () => tinted(latar ? LATAR[latar].floor : "#D8BC95", look.tint),
+    [latar, look.tint],
+  );
+  const wall = useMemo(() => tinted("#F1DDBA", look.tint), [look.tint]);
+  const glow = useMemo(() => makeGlowTexture(), []);
+  useEffect(() => () => glow.dispose(), [glow]);
+
+  // Warna lantai berpindah pelan saat latar berganti.
+  useFrame((_, delta) => {
+    floorMat.current?.color.lerp(floorTarget, 1 - Math.exp(-delta * 6));
+  });
+
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 4]}>
         <planeGeometry args={[40, 24]} />
-        <meshBasicMaterial color="#D8BC95" />
+        <meshBasicMaterial ref={floorMat} color={floorTarget} />
       </mesh>
       <mesh position={[0, 6, WALL_Z]}>
         <planeGeometry args={[40, 12]} />
-        <meshBasicMaterial color="#F1DDBA" />
+        <meshBasicMaterial color={wall} />
       </mesh>
       <mesh position={[0, 0.09, WALL_Z + 0.02]}>
         <boxGeometry args={[40, 0.18, 0.04]} />
@@ -216,11 +268,18 @@ const Room = () => {
         </mesh>
         <mesh position={[0, 0, 0.035]}>
           <planeGeometry args={[1.34, 0.94]} />
-          <meshBasicMaterial color={sky} />
+          <meshBasicMaterial color={look.sky} />
         </mesh>
-        <mesh position={[0.3, orbY, 0.04]}>
+        {look.stars &&
+          STARS.map(([x, y], index) => (
+            <mesh key={index} position={[x, y, 0.038]}>
+              <circleGeometry args={[0.018, 8]} />
+              <meshBasicMaterial color="#FFF6D6" />
+            </mesh>
+          ))}
+        <mesh position={[0.3, look.orbY, 0.04]}>
           <circleGeometry args={[0.13, 32]} />
-          <meshBasicMaterial color={orb} />
+          <meshBasicMaterial color={look.orb} />
         </mesh>
         <mesh position={[0, 0, 0.05]}>
           <boxGeometry args={[0.05, 0.94, 0.02]} />
@@ -253,8 +312,8 @@ const Room = () => {
         ))}
       </group>
 
-      {/* Lampu gantung */}
-      <group position={[0, 3.05, -0.3]}>
+      {/* Lampu gantung, hanya di kantor 3D */}
+      <group position={[0, 3.05, -0.3]} visible={!latar}>
         <mesh position={[0, 0.5, 0]}>
           <boxGeometry args={[0.03, 1, 0.03]} />
           <Flat color={INK} />
@@ -268,8 +327,86 @@ const Room = () => {
           <boxGeometry args={[1.3, 0.04, 0.16]} />
           <meshBasicMaterial color="#FFF3C2" />
         </mesh>
+        <mesh position={[0, -0.5, -0.2]} raycast={() => null}>
+          <planeGeometry args={[3.4, 1.8]} />
+          <meshBasicMaterial
+            map={glow}
+            transparent
+            opacity={look.glow}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            toneMapped={false}
+          />
+        </mesh>
       </group>
     </group>
+  );
+};
+
+// Ukuran gambar latar di dunia 3D. Sisi kiri dan kanan diisi pantulan gambar supaya
+// layar lebar dan gerakan kamera tidak memperlihatkan tepinya.
+const LATAR_W = 4.6;
+const LATAR_H = (LATAR_W * 1376) / 768;
+const LATAR_PLANE_W = 16;
+const FLOOR_LINE = -0.55;
+
+const LatarWall = ({ latar, tint }: { latar: LatarId | null; tint: string }) => {
+  const textures = useTexture(LATAR_IDS.map((id) => `/latar/${id}.webp`));
+  const prepared = useMemo(() => {
+    textures.forEach((texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.MirroredRepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.repeat.set(LATAR_PLANE_W / LATAR_W, 1);
+      texture.offset.set(-(LATAR_PLANE_W / LATAR_W - 1) / 2, 0);
+      texture.anisotropy = 8;
+      texture.needsUpdate = true;
+    });
+    return textures;
+  }, [textures]);
+  const meshes = useRef<(THREE.Mesh | null)[]>([]);
+  const color = useMemo(() => new THREE.Color(tint), [tint]);
+
+  // Latar baru memudar masuk, latar lama memudar keluar.
+  useFrame((_, delta) => {
+    const ease = 1 - Math.exp(-delta * 7);
+    LATAR_IDS.forEach((id, index) => {
+      const mesh = meshes.current[index];
+      if (!mesh) return;
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      material.opacity = THREE.MathUtils.lerp(material.opacity, id === latar ? 1 : 0, ease);
+      mesh.visible = material.opacity > 0.01;
+    });
+  });
+
+  return (
+    <>
+      {LATAR_IDS.map((id, index) => {
+        const centerY = FLOOR_LINE + (LATAR[id].shift ?? 0) + (LATAR[id].floorEnd - 0.5) * LATAR_H;
+        return (
+          <mesh
+            key={id}
+            position={[0, centerY, WALL_Z + 0.12 + index * 0.001]}
+            renderOrder={id === latar ? 2 : 1}
+            visible={false}
+            raycast={() => null}
+            ref={(mesh) => {
+              meshes.current[index] = mesh;
+            }}
+          >
+            <planeGeometry args={[LATAR_PLANE_W, LATAR_H]} />
+            <meshBasicMaterial
+              map={prepared[index]}
+              color={color}
+              transparent
+              opacity={0}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+        );
+      })}
+    </>
   );
 };
 
@@ -524,14 +661,16 @@ const CameraRig = () => {
 };
 
 // Di layar sempit properti dirapatkan ke tengah supaya semuanya tetap terlihat.
-const Props = ({ onPick }: { onPick: PickHandler }) => {
+const Props = ({ onPick, latar }: { onPick: PickHandler; latar: LatarId | null }) => {
   const narrow = useThree((state) => state.size.width < state.size.height);
   const f = narrow ? 0.72 : 1;
   return (
     <>
-      <Clickable id="jam" position={[-0.95 * f, 2.55, WALL_Z + 0.04]} onPick={onPick} phase={0}>
-        <WallClock />
-      </Clickable>
+      {!(latar && LATAR[latar].outdoor) && (
+        <Clickable id="jam" position={[-0.95 * f, 2.55, WALL_Z + (latar ? 0.2 : 0.04)]} onPick={onPick} phase={0}>
+          <WallClock />
+        </Clickable>
+      )}
       <Clickable id="tanaman" position={[-1.72 * f, DESK_Y, 0.36]} onPick={onPick} phase={1}>
         <Plant />
       </Clickable>
@@ -560,6 +699,8 @@ export default function Scene({
   bump: number;
   onPick: PickHandler;
 }) {
+  const [look] = useState(() => SUASANA[currentSuasana()]);
+  const latar = POSE_LATAR[pose];
   return (
     <Canvas
       flat
@@ -567,16 +708,19 @@ export default function Scene({
       camera={{ fov: 35, position: [0, 1.3, 6], near: 0.1, far: 60 }}
       style={{ touchAction: "none" }}
     >
-      <color attach="background" args={["#F1DDBA"]} />
-      <ambientLight intensity={2.4} />
-      <directionalLight position={[2, 5, 4]} intensity={1.1} />
+      <color attach="background" args={[look.clear]} />
+      <ambientLight intensity={look.ambient} />
+      <directionalLight position={[2, 5, 4]} intensity={look.sun} />
       <CameraRig />
-      <Room />
+      <Room look={look} latar={latar} />
       <Suspense fallback={null}>
-        <Bagas pose={pose} bump={bump} onPick={onPick} />
+        <LatarWall latar={latar} tint={look.tint} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <Bagas pose={pose} bump={bump} onPick={onPick} tint={look.bagas} />
       </Suspense>
       <Desk />
-      <Props onPick={onPick} />
+      <Props onPick={onPick} latar={latar} />
     </Canvas>
   );
 }
