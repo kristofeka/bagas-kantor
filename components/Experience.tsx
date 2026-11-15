@@ -208,7 +208,7 @@ export default function Experience({ products = [] }: { products?: Product[] }) 
               <span>
                 <b>{deal.name}</b>
                 <small>
-                  {deal.store} · link afiliasi
+                  {[deal.price, deal.store].filter(Boolean).join(" · ")}
                 </small>
               </span>
               <span aria-hidden="true">→</span>
