@@ -255,10 +255,14 @@ nav a:active,
   background: var(--blue);
 }
 
+/* Latar bisa gelap (ruang server, malam), jadi petunjuk diberi alas terang seperti penghitung. */
 .hint {
   margin: 0;
+  justify-self: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 253, 246, 0.78);
   font-size: 13px;
-  opacity: 0.75;
   text-align: center;
 }
 
