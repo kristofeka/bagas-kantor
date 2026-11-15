@@ -1,11 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { POSES, POSE_IDS, type PoseId } from "../lib/poses";
 import { playLine, playSound, playVoice, setSoundEnabled, unlockSound } from "../lib/sound";
 import { KALIMAT_SAKTI, POSE_LINES, REACTIONS, greeting, type PropId, type Reaction } from "../lib/lines";
-import type { Product } from "../lib/shop";
+import Link from "next/link";
+import Thumb from "./Thumb";
+import { PROP_IDS, PROP_PAGES, groupByProp, type Product } from "../lib/shop";
 import { track } from "../lib/analytics";
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
@@ -63,15 +65,6 @@ const InstagramIcon = () => (
   </svg>
 );
 
-// Kotak gambar produk: foto dari sheet bila ada, kalau tidak kotak warna.
-const Thumb = ({ product, big }: { product: Product; big?: boolean }) =>
-  product.image ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img className={big ? "swatch big" : "swatch"} src={product.image} alt="" loading="lazy" />
-  ) : (
-    <span className={big ? "swatch big" : "swatch"} style={{ background: product.color }} aria-hidden="true" />
-  );
-
 export default function Experience({ products = [] }: { products?: Product[] }) {
   const [pose, setPose] = useState<PoseId>("lipat-tangan");
   const [line, setLine] = useState("");
@@ -82,6 +75,8 @@ export default function Experience({ products = [] }: { products?: Product[] }) 
   const [shopOpen, setShopOpen] = useState(false);
   const cursor = useRef<Record<string, number>>({});
   const typed = useTyped(line, bump);
+  const groups = useMemo(() => groupByProp(products), [products]);
+  const dealCount = deal ? (groups.get(deal.prop)?.length ?? 0) : 0;
 
   const react = useCallback((reaction: Reaction, product: Product | null = null) => {
     setDeal(product);
@@ -196,6 +191,7 @@ export default function Experience({ products = [] }: { products?: Product[] }) 
           <span aria-hidden="true">{typed}</span>
           <span className="sr-only">{line}</span>
           {deal && typed.length === line.length && (
+            <>
             <a
               className="deal"
               href={deal.url}
@@ -213,6 +209,12 @@ export default function Experience({ products = [] }: { products?: Product[] }) 
               </span>
               <span aria-hidden="true">→</span>
             </a>
+            {dealCount > 1 && (
+              <Link className="deal-more" href={`/barang/${deal.prop}`} data-track="lihat_barang_lain" data-track-value={deal.prop}>
+                Lihat {dealCount - 1} pilihan lainnya →
+              </Link>
+            )}
+            </>
           )}
         </div>
       )}
@@ -236,25 +238,21 @@ export default function Experience({ products = [] }: { products?: Product[] }) 
               </button>
             </header>
             <ul>
-              {products.map((product, index) => (
-                <li key={`${product.prop}-${index}`}>
-                  <Thumb product={product} big />
-                  <div>
-                    <b>{product.name}</b>
-                    <p>{product.note}</p>
-                    {product.price && <small>{product.price}</small>}
-                  </div>
-                  <a
-                    href={product.url}
-                    target="_blank"
-                    rel="sponsored noreferrer"
-                    data-track="afiliasi_daftar"
-                    data-track-value={product.prop}
-                  >
-                    Lihat di {product.store}
-                  </a>
-                </li>
-              ))}
+              {PROP_IDS.filter((id) => groups.has(id)).map((id) => {
+                const items = groups.get(id)!;
+                return (
+                  <li key={id}>
+                    <Link href={`/barang/${id}`} className="shop-row" data-track="buka_halaman_barang" data-track-value={id}>
+                      <Thumb product={items[0]} size="big" />
+                      <div>
+                        <b>{PROP_PAGES[id].label}</b>
+                        <p>{items.length > 1 ? `${items.length} pilihan` : items[0].name}</p>
+                      </div>
+                      <span className="shop-go" aria-hidden="true">→</span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
             <p className="disclosure">Link afiliasi. Harga bisa berubah, cek di toko.</p>
           </section>

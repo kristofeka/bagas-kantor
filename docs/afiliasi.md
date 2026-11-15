@@ -7,8 +7,9 @@ Produk afiliasi di website diatur dari satu Google Sheet. Mengisi link atau meny
 
 ## Yang tampil di website
 
-- **Kartu di balon.** Setelah pengunjung mengklik barang di meja dan Bagas selesai bicara, kartu produk untuk barang itu muncul di bawah balon. Kartu hanya muncul kalau barang itu punya produk yang aktif.
-- **Tombol "Barang Bagas"** di samping tombol kalimat sakti. Isinya daftar semua produk yang aktif. Tombol ini hanya muncul kalau ada minimal satu produk aktif.
+- **Kartu di balon.** Setelah pengunjung mengklik barang di meja dan Bagas selesai bicara, kartu produk untuk barang itu muncul di bawah balon. Yang tampil adalah baris aktif paling atas untuk barang itu. Kalau barang itu punya lebih dari satu produk aktif, di bawah kartu muncul link "Lihat N pilihan lainnya".
+- **Halaman barang** di `/barang/<barang>`, mis. `/barang/mug`. Isinya semua produk aktif untuk barang itu, dengan tab untuk pindah ke barang lain. Produk paling atas diberi badge "Pilihan Bagas". Link halaman ini bisa dipasang langsung di caption atau link bio.
+- **Tombol "Barang Bagas"** di samping tombol kalimat sakti. Isinya satu baris per barang yang punya produk aktif, mengarah ke halaman barangnya. Tombol ini hanya muncul kalau ada minimal satu produk aktif.
 
 ## Setup pertama (sekali saja)
 
@@ -57,8 +58,8 @@ Nama kolom di baris pertama harus persis seperti tabel di atas. Urutan kolom bol
 - **Menyalakan produk**: isi `link`, lalu centang `aktif`.
 - **Mematikan sementara**: hilangkan centang `aktif`. Link tidak perlu dihapus.
 - **Ganti produk**: ubah `nama`, `link`, dan kolom lain di baris yang sama.
-- **Lebih dari satu produk untuk satu barang**: tambah baris dengan `barang` yang sama. Semua tampil di daftar "Barang Bagas"; kartu di balon memakai baris aktif paling atas.
-- **Urutan di daftar** mengikuti urutan baris di sheet.
+- **Lebih dari satu produk untuk satu barang**: tambah baris dengan `barang` yang sama (disarankan 1–10). Semua tampil di halaman `/barang/<barang>`; kartu di balon memakai baris aktif paling atas.
+- **Urutan di halaman barang** mengikuti urutan baris di sheet. Taruh produk andalan di baris paling atas.
 
 ## Kalau produk tidak muncul
 
@@ -71,11 +72,13 @@ Nama kolom di baris pertama harus persis seperti tabel di atas. Urutan kolom bol
 
 ## Tracking
 
-Klik link afiliasi otomatis tercatat di GA4 sebagai `ui_click` dengan `click_name` `afiliasi_balon` atau `afiliasi_daftar`, dan `click_value` berisi nama barang. Lihat [tracking.md](tracking.md).
+Klik link afiliasi otomatis tercatat di GA4 sebagai `ui_click` dengan `click_name` `afiliasi_balon` (kartu di balon) atau `afiliasi_halaman` (halaman barang). `click_value` berisi nama barang; untuk halaman barang ditambah urutan produk, mis. `mug:3`. Klik link "Lihat N pilihan lainnya" tercatat sebagai `lihat_barang_lain`. Lihat [tracking.md](tracking.md).
 
 ## Untuk developer
 
 - `lib/affiliate-sheet.ts`: membaca sheet sebagai CSV di server (`loadProducts`) dan memvalidasi tiap baris. `SHEET_REFRESH_SECONDS` mengatur jeda baca ulang.
 - `app/page.tsx`: memanggil `loadProducts()` dengan `revalidate = 300`, lalu mengirim produk ke `<Experience products={…} />`.
+- `app/barang/[slug]/page.tsx`: halaman per barang, juga `revalidate = 300`. Nama dan sapaan tiap barang ada di `PROP_PAGES` (`lib/shop.ts`).
+- Untuk mencoba di lokal tanpa sheet, isi `AFFILIATE_SHEET_URL` di `.env.local` dengan URL `data:text/csv,...` berisi CSV contoh. File ini tidak ikut di-commit.
 - `lib/shop.ts`: tipe `Product`, daftar barang yang sah, dan warna cadangan.
 - Menguji di localhost: jalankan dengan `AFFILIATE_SHEET_URL="<link sheet>" npm run dev`.

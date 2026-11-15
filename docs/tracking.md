@@ -159,10 +159,14 @@ Nama `data-track` yang sudah dipakai:
 | `sosmed_instagram` | Link Instagram | – |
 | `kalimat_sakti` | Tombol "Minta kalimat sakti" | – |
 | `mood` | Chip mood di bawah | id pose, mis. `lelah` |
-| `buka_barang_bagas` | Tombol "Barang Bagas" (afiliasi, masih disembunyikan) | – |
+| `buka_barang_bagas` | Tombol "Barang Bagas" | – |
 | `tutup_barang_bagas` | Tombol tutup daftar Barang Bagas | – |
 | `afiliasi_balon` | Kartu produk di balon | id barang, mis. `mug` |
-| `afiliasi_daftar` | Tombol toko di daftar Barang Bagas | id barang |
+| `lihat_barang_lain` | Link "Lihat N pilihan lainnya" di bawah kartu balon | id barang |
+| `buka_halaman_barang` | Baris barang di daftar Barang Bagas | id barang |
+| `afiliasi_halaman` | Tombol toko di halaman `/barang/<barang>` | id barang dan urutan, mis. `mug:3` |
+| `tab_barang` | Tab barang di halaman barang | id barang |
+| `balik_ke_meja` | Tombol "← Meja Bagas" di halaman barang | – |
 
 Nilai `item` pada `prop_click`: `bagas`, `laptop`, `mug`, `hp`, `jam`, `kalender`, `tanaman`.
 
